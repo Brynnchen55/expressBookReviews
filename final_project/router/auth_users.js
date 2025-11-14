@@ -57,7 +57,53 @@ regd_users.post("/login", (req,res) => {
 // Add a book review
 regd_users.put("/auth/review/:isbn", (req, res) => {
   //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+  const isbn = req.params.isbn;
+  const review = req.query.review;
+
+  const username = req.session.authorization.username;
+  if (!books[isbn]) {
+    return res.status(404).json({ message: 'Book with ISBN &{isbn} not found.'});
+  }
+
+  if (!review) {
+        return res.status(400).json({ message: "Review content cannot be empty." });
+  }
+
+  if (!books[isbn].reviews) {
+        books[isbn].reviews = {};
+  }
+
+  if (books[isbn].reviews[username]) {
+        // User has already reviewed -> Modify existing review
+        books[isbn].reviews[username] = review;
+        return res.status(200).json({ message: `Review for ISBN ${isbn} successfully modified by user ${username}.` });
+    } else {
+        // First review by this user -> Add new review
+        books[isbn].reviews[username] = review;
+        return res.status(200).json({ message: `Review for ISBN ${isbn} successfully added by user ${username}.` });
+    }
+});
+
+// Delete a book review
+regd_users.delete("/auth/review/:isbn", (req, res) => {
+    const isbn = req.params.isbn;
+    // Get username from session (guaranteed to exist by the auth middleware)
+    const username = req.session.authorization.username; 
+
+    // Check if the book exists
+    if (!books[isbn]) {
+        return res.status(404).json({ message: `Book with ISBN ${isbn} not found.` });
+    }
+
+    // Check if the user's review exists before attempting to delete
+    if (books[isbn].reviews && books[isbn].reviews[username]) {
+        // Delete the review entry associated with the username
+        delete books[isbn].reviews[username];
+        return res.status(200).json({ message: `Review by user ${username} for ISBN ${isbn} deleted successfully.` });
+    } else {
+        // Review not found for this user
+        return res.status(404).json({ message: `Review by user ${username} for ISBN ${isbn} not found.` });
+    }
 });
 
 module.exports.authenticated = regd_users;
